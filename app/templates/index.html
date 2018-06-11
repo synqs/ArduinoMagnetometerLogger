@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% block app_content %}
+<table class="table table-hover" id ="arduino overview">
+  <thead>
+  <tr>
+    <th scope="col">#</th>
+    <th scope="col">Name</th>
+    <th scope="col">Port</th>
+    <th scope="col">Status</th>
+    <th scope="col">Setpoint</th>
+    <th scope="col">Current Value</th>
+    <th scope="col">Other actions </th>
+  </tr>
+  </thead>
+  <tbody>
+    {% for ard in props %}
+    <tr>
+      <td>{{ ard.id }}</td>
+      <td>{{ ard.name }}</td>
+      <td>{{ ard.port }}</td>
+      {% if ard.active %}
+      <td class="bg-success">Open</td>
+      {% else %}
+      <td class="bg-warning">Closed</td>
+      {% endif %}
+      <td>{{ ard.setpoint }}</td>
+      <td id ='{{ ard.label}}'>Not implemented.</td>
+      <td>
+        <a class='btn btn-default' href="{{url_for('change_arduino', ard_nr = ard.id)}}">Settings</a>
+        <a class='btn btn-default' href="{{url_for('details', ard_nr = ard.id)}}">Log</a><td>
+        <!-- <a class='btn btn-default' href="{{url_for('index')}}"><span class ="glyphicon glyphicon-remove"></span></a><td> -->
+    </tr>
+    {% endfor %}
+ </tbody>
+</table>
+<a class="btn btn-default" id="add_arduino" href="{{url_for('add_arduino')}}"> Add another Arduino.</a>
+
+<h2>General stuff:</h2>
+<p>Average ping/pong latency: <b><span id="ping-pong"></span>ms</b></p>
+<div id="log"></div>
+{% endblock %}
+
+{% block scripts %}
+{{super()}}
+<script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+$(document).ready(function() {
+  namespace = '';
+  // Connect to the Socket.IO server.
+  // The connection URL has the following format:
+  //     http[s]://<domain>:<port>[/<namespace>]
+  var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+  // Event handler for new connections.
+  socket.on('connect', function() {
+    socket.emit('my_response', {data: 'I\'m connected!'});
+  });
+
+  // Event handler for server sent data.
+  socket.on('my_response', function(msg) {
+    $('#log').prepend('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
+  });
+
+  socket.on('temp_value', function(msg) {
+    var temp = msg.data;
+    var id = msg.id;
+    var el_name = '#read' + msg.id;
+    console.log(el_name);
+    $(el_name).html(temp);
+  });
+
+
+  // Interval function that tests message latency by sending a "ping"
+  var ping_pong_times = [];
+  var start_time;
+  window.setInterval(function() {
+    start_time = (new Date).getTime();
+    socket.emit('my_ping');
+  }, 1000);
+
+
+  socket.on('my_pong', function() {
+    var latency = (new Date).getTime() - start_time;
+    ping_pong_times.push(latency);
+    ping_pong_times = ping_pong_times.slice(-30); // keep last 30 samples
+    var sum = 0;
+    for (var i = 0; i < ping_pong_times.length; i++)
+    sum += ping_pong_times[i];
+    $('#ping-pong').text(Math.round(10 * sum / ping_pong_times.length) / 10);
+  });
+});
+</script>
+{% endblock %}
