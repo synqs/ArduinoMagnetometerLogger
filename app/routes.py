@@ -605,6 +605,13 @@ def run_disconnect():
 def ping_pong():
     emit('my_pong')
 
+@socketio.on('read_mag')
+def read_mag():
+
+    session['receive_count'] = session.get('receive_count', 0) + 1;
+    emit('my_response',
+        {'data': 'Read the data now.', 'count': session['receive_count']})
+
 # error handling
 @app.errorhandler(500)
 def internal_error(error):

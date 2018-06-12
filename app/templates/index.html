@@ -36,6 +36,7 @@
 </table>
 <a class="btn btn-default" id="add_arduino" href="{{url_for('add_arduino')}}"> Add another Arduino.</a>
 
+<button class="btn btn-default" id="read_button"> Read magnetic field value.</button>
 <h2>General stuff:</h2>
 <p>Average ping/pong latency: <b><span id="ping-pong"></span>ms</b></p>
 <div id="log"></div>
@@ -61,6 +62,10 @@ $(document).ready(function() {
   // Event handler for server sent data.
   socket.on('my_response', function(msg) {
     $('#log').prepend('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
+  });
+
+  $("#read_button" ).click(function() {
+    socket.emit('read_mag');
   });
 
   socket.on('temp_value', function(msg) {
