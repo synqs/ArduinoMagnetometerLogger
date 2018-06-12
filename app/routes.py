@@ -79,62 +79,11 @@ class SerialSocketProtocol(object):
         if self.is_open():
             self.serial.close()
 
-    def start(self):
-        """
-        stop the loop and later also the serial port
-        """
-        if not self.switch:
-            if not self.is_open():
-                print('the serial port should be open right now')
-            else:
-                self.switch = True
-                thread = self.socketio.start_background_task(target=self.do_work)
-        else:
-            print('Already running')
-
     def open_serial(self, port, baud_rate, timeout = 1):
         """
         open the serial port
         """
         self.serial = serial.Serial(port, 9600, timeout = 1)
-
-    def do_work(self):
-        """
-        do work and emit message
-        """
-
-        while self.switch:
-            self.unit_of_work += 1
-
-            # must call emit from the socketio
-            # must specify the namespace
-
-            if self.is_open():
-                try:
-                    timestamp, ard_str = self.pull_data()
-
-                    vals = ard_str.split(',');
-                    if len(vals)>=2:
-                        self.socketio.emit('temp_value',
-                            {'data': vals[1], 'id': self.id})
-
-                    self.socketio.emit('log_response',
-                    {'time':timestamp, 'data': vals, 'count': self.unit_of_work,
-                        'id': self.id})
-                except Exception as e:
-                    print('{}'.format(e))
-                    self.socketio.emit('my_response',
-                    {'data': '{}'.format(e), 'count': self.unit_of_work})
-                    self.switch = False
-            else:
-                self.switch = False
-                # TODO: Make this a link
-                error_str = 'Port closed. please configure one properly under config.'
-                self.socketio.emit('log_response',
-                {'data': error_str, 'count': self.unit_of_work})
-
-                # important to use eventlet's sleep method
-            eventlet.sleep(app.config['SERIAL_TIME'])
 
     def pull_data(self):
         '''
@@ -239,8 +188,7 @@ def add_arduino():
         ssProto = SerialSocketProtocol(socketio, name);
         ssProto.id = len(arduinos)
         try:
-            ssProto.open_serial(n_port, 9600, timeout = 1)
-            ssProto.start()
+            ssProto.open_serial(n_port, 115200, timeout = 1)
             if ssProto.is_open():
                 app.config['SERIAL_PORT'] = n_port;
                 arduinos.append(ssProto)
@@ -322,8 +270,7 @@ def update():
         try:
             if arduino.connection_open():
                 arduino.stop()
-            arduino.open_serial(n_port, 9600, timeout = 1)
-            arduino.start()
+            arduino.open_serial(n_port, 115200, timeout = 1)
             if arduino.is_open():
                 flash('We updated the serial to {}'.format(n_port))
             else:
@@ -607,10 +554,17 @@ def ping_pong():
 
 @socketio.on('read_mag')
 def read_mag():
+    global arduinos;
+    if arduinos:
+        arduino = arduinos[0];
+        timestamp, ard_str = arduino.pull_data();
+        print(ard_str)
+    else:
+        ard_str = 'Nothing to connect to';
 
     session['receive_count'] = session.get('receive_count', 0) + 1;
     emit('my_response',
-        {'data': 'Read the data now.', 'count': session['receive_count']})
+        {'data': ard_str, 'count': session['receive_count']})
 
 # error handling
 @app.errorhandler(500)
