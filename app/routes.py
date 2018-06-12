@@ -26,7 +26,6 @@ class SerialSocketProtocol(object):
     '''
 
     serial = None
-    switch = False
     unit_of_work = 0
     name = '';
     id = 0;
@@ -40,7 +39,6 @@ class SerialSocketProtocol(object):
         assign socketio object to emit
         """
         self.serial = serial.Serial()
-        self.switch = False
         self.socketio = socketio
 
     def __init__(self, socketio, name):
@@ -48,7 +46,6 @@ class SerialSocketProtocol(object):
         assign socketio object to emit
         """
         self.serial = serial.Serial()
-        self.switch = False
         self.socketio = socketio
         self.name = name;
 
@@ -58,23 +55,10 @@ class SerialSocketProtocol(object):
         '''
         return self.serial.is_open
 
-    def is_alive(self):
-        """
-        return the running status
-        """
-        return self.switch
-
-    def connection_open(self):
-        '''
-        Is the protocol running ?
-        '''
-        return self.is_alive() and self.is_open()
-
     def stop(self):
         """
         stop the loop and later also the serial port
         """
-        self.switch = False
         self.unit_of_work = 0
         if self.is_open():
             self.serial.close()
@@ -83,7 +67,7 @@ class SerialSocketProtocol(object):
         """
         open the serial port
         """
-        self.serial = serial.Serial(port, 9600, timeout = 1)
+        self.serial = serial.Serial(port, baud_rate, timeout = 1)
 
     def pull_data(self):
         '''
@@ -125,7 +109,7 @@ def index():
         # create also the name for the readout field of the temperature
         temp_field_str = 'read' + str(arduino.id);
         dict = {'name': arduino.name, 'id': arduino.id, 'port': arduino.serial.port,
-        'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+        'active': arduino.is_open(), 'setpoint': arduino.setpoint,
         'label': temp_field_str};
         props.append(dict)
 
@@ -151,13 +135,13 @@ def details(ard_nr):
         # create also the name for the readout field of the temperature
         temp_field_str = 'read' + str(arduino.id);
         dict = {'name': arduino.name, 'id': arduino.id, 'port': arduino.serial.port,
-        'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+        'active': arduino.is_open(), 'setpoint': arduino.setpoint,
         'label': temp_field_str};
         props.append(dict)
 
     name = arduino.name;
     port = arduino.serial.port;
-    conn_open = arduino.connection_open()
+    conn_open = arduino.is_open()
     return render_template('details.html',n_ards = n_ards, props = props, ard_nr = ard_nr,
         name = name, conn_open = conn_open);
 
@@ -223,7 +207,7 @@ def change_arduino(ard_nr):
     n_ards = len(arduinos);
     arduino = arduinos[int(ard_nr)];
     props = {'name': arduino.name, 'id': int(ard_nr), 'port': arduino.serial.port,
-            'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+            'active': arduino.is_open(), 'setpoint': arduino.setpoint,
             'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
 
     uform = UpdateForm(id=ard_nr)
@@ -268,7 +252,7 @@ def update():
         arduino = arduinos[int(id)];
         n_port =  uform.serial_port.data;
         try:
-            if arduino.connection_open():
+            if arduino.is_open():
                 arduino.stop()
             arduino.open_serial(n_port, 115200, timeout = 1)
             if arduino.is_open():
@@ -280,7 +264,7 @@ def update():
         return redirect(url_for('change_arduino', ard_nr = id))
     else:
         props = {'name': arduino.name, 'id': int(ard_nr), 'port': arduino.serial.port,
-            'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+            'active': arduino.is_open(), 'setpoint': arduino.setpoint,
             'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
 
         return render_template('change_arduino.html', form=uform, dform = dform,
@@ -322,7 +306,7 @@ def arduino():
         return redirect(url_for('change_arduino', ard_nr = id))
     else:
         props = {'name': arduino.name, 'id': int(ard_nr), 'port': arduino.serial.port,
-                'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
                 'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
 
         return render_template('change_arduino.html', form=uform, dform = dform,
@@ -364,7 +348,7 @@ def gain():
         return redirect(url_for('change_arduino', ard_nr = id))
     else:
         props = {'name': arduino.name, 'id': id, 'port': arduino.serial.port,
-                'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
                 'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
         return render_template('change_arduino.html', form=uform, dform = dform,
             cform = cform,  sform = sform, gform = gform, iform = iform,
@@ -405,7 +389,7 @@ def integral():
         return redirect(url_for('change_arduino', ard_nr = id))
     else:
         props = {'name': arduino.name, 'id': id, 'port': arduino.serial.port,
-                'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
                 'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
 
         return render_template('change_arduino.html', form=uform, dform = dform,
@@ -447,7 +431,7 @@ def diff():
         return redirect(url_for('change_arduino', ard_nr = id))
     else:
         props = {'name': arduino.name, 'id': id, 'port': arduino.serial.port,
-                'active': arduino.connection_open(), 'setpoint': arduino.setpoint,
+                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
                 'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
 
         return render_template('change_arduino.html', form=uform, dform = dform,
@@ -497,22 +481,37 @@ def stop():
 
     return redirect(url_for('config'))
 
-@app.route('/file/<filename>')
-def file(filename):
-    '''function to save the values of the hdf5 file'''
+@app.route('/file/<filestring>')
+def file(filestring):
+    '''function to save the values of the hdf5 file. It should have the following structure
+    <ard_nr>+<filename>
+    '''
+    # first let us devide into the right parts
+    print(filestring)
+    parts = filestring.split('+');
+    if not len(parts) == 2:
+        flash('The filestring should be of the form')
+        return redirect(url_for('index'))
 
+    filename = parts[1]
+    id = int(parts[0])
+
+    global arduinos;
+
+    if id >= len(arduinos):
+        flash('Arduino Index out of range.')
+        return redirect(url_for('index'))
+
+    arduino = arduinos[id];
     # We should add the latest value of the database here. Better would be to trigger the readout.
     # Let us see how this actually works.
-    vals = ard_str.split(',');
+    vals = arduino.ard_str.split(',');
     if vals:
-        print(vals)
         with h5py.File(filename, "a") as f:
             if 'globals' in f.keys():
                 params = f['globals']
-                params.attrs['T_Verr'] = np.float(vals[0])
-                params.attrs['T_Vmeas'] = np.float(vals[1])
-                params.attrs['T_Vinp'] = np.float(vals[2])
-                flash('Added the vals {} to the file {}'.format(ard_str, filename))
+                params.attrs['x1'] = np.float(vals[0])
+                flash('Added the vals {} to the file {}'.format(arduino.ard_str, filename))
             else:
                 flash('The file {} did not have the global group yet.'.format(filename), 'error')
     else:
