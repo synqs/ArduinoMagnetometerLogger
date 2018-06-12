@@ -33,6 +33,7 @@ class SerialSocketProtocol(object):
     diff = None;
     integral = None;
     gain = None;
+    ard_str = '';
 
     def __init__(self, socketio):
         """
@@ -73,16 +74,15 @@ class SerialSocketProtocol(object):
         '''
         Pulling the actual data from the arduino.
         '''
-        global ard_str;
         ser = self.serial;
         # only read out on ask
         o_str = 'w'
         b = o_str.encode()
         ser.write(b);
         stream = ser.read(ser.in_waiting);
-        ard_str = stream.decode(encoding='windows-1252');
+        self.ard_str = stream.decode(encoding='windows-1252');
         timestamp = datetime.now().replace(microsecond=0).isoformat();
-        return timestamp, ard_str
+        return timestamp, self.ard_str
 
 @app.context_processor
 def git_url():
@@ -505,7 +505,7 @@ def file(filestring):
     arduino = arduinos[id];
     # We should add the latest value of the database here. Better would be to trigger the readout.
     # Let us see how this actually works.
-    vals = arduino.ard_str.split(',');
+    vals = arduino.ard_str.split(' ');
     if vals:
         with h5py.File(filename, "a") as f:
             if 'globals' in f.keys():
