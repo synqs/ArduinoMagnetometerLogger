@@ -17,38 +17,6 @@ class SerialWaitForm(FlaskForm):
     serial_time = StringField('Time between measurements:', validators=[DataRequired()])
     submit = SubmitField('Update waiting time.')
 
-class UpdateSetpointForm(FlaskForm):
-    '''
-    The form for connecting to the Arduino
-    '''
-    id = HiddenField('A hidden field');
-    setpoint = IntegerField('New setpoint:', [DataRequired(), NumberRange(0,1023)])
-    submit = SubmitField('Update setpoint')
-
-class UpdateGainForm(FlaskForm):
-    '''
-    The form for updateing the gain of the Arduino
-    '''
-    id = HiddenField('A hidden field');
-    gain = FloatField('New gain:', [DataRequired(), NumberRange(0)])
-    submit = SubmitField('Update gain')
-
-class UpdateIntegralForm(FlaskForm):
-    '''
-    The form for updating the integral part to the Arduino
-    '''
-    id = HiddenField('A hidden field');
-    tau = FloatField('New tauI in seconds:', [DataRequired(), NumberRange(1)])
-    submit = SubmitField('Update time constant')
-
-class UpdateDifferentialForm(FlaskForm):
-    '''
-    The form for updating the differential part of the Arduino
-    '''
-    id = HiddenField('A hidden field');
-    tau = FloatField('New tauD in seconds:', [DataRequired(), NumberRange(0)])
-    submit = SubmitField('Update tauD')
-
 class DisconnectForm(FlaskForm):
     '''
     The form for disconnecting from the Arduino

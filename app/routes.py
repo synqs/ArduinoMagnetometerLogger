@@ -1,6 +1,5 @@
 from app import app, socketio
 from app.forms import UpdateForm, DisconnectForm, ConnectForm, SerialWaitForm, ReConnectForm
-from app.forms import UpdateSetpointForm, UpdateGainForm, UpdateIntegralForm, UpdateDifferentialForm
 import serial
 import h5py
 import git
@@ -29,10 +28,6 @@ class SerialSocketProtocol(object):
     unit_of_work = 0
     name = '';
     id = 0;
-    setpoint = '';
-    diff = None;
-    integral = None;
-    gain = None;
     ard_str = '';
 
     def __init__(self, socketio):
@@ -109,8 +104,7 @@ def index():
         # create also the name for the readout field of the temperature
         temp_field_str = 'read' + str(arduino.id);
         dict = {'name': arduino.name, 'id': arduino.id, 'port': arduino.serial.port,
-        'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-        'label': temp_field_str};
+        'active': arduino.is_open(), 'label': temp_field_str};
         props.append(dict)
 
     return render_template('index.html',n_ards = n_ards, props = props);
@@ -135,8 +129,7 @@ def details(ard_nr):
         # create also the name for the readout field of the temperature
         temp_field_str = 'read' + str(arduino.id);
         dict = {'name': arduino.name, 'id': arduino.id, 'port': arduino.serial.port,
-        'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-        'label': temp_field_str};
+        'active': arduino.is_open(), 'label': temp_field_str};
         props.append(dict)
 
     name = arduino.name;
@@ -144,19 +137,6 @@ def details(ard_nr):
     conn_open = arduino.is_open()
     return render_template('details.html',n_ards = n_ards, props = props, ard_nr = ard_nr,
         name = name, conn_open = conn_open);
-
-@app.route('/overview')
-def overview():
-    '''
-    The  function summarizing the status of each Arduino.
-    '''
-    global arduinos
-    n_ards = len(arduinos);
-    props = [];
-    for arduino in arduinos:
-        dict = {'name': arduino.name, 'port': arduino.serial.port};
-        props.append(dict)
-    return render_template('status_overview.html', n_ards = n_ards, props = props)
 
 @app.route('/add_arduino', methods=['GET', 'POST'])
 def add_arduino():
@@ -189,11 +169,6 @@ def add_arduino():
     n_ards = len(arduinos)
     return render_template('add_arduino.html', port = port, cform = cform, n_ards=n_ards);
 
-def change_arduino_param(ard_nr):
-    '''
-    The function, which allows to combine the different views
-    '''
-
 @app.route('/change_arduino/<ard_nr>')
 def change_arduino(ard_nr):
     '''
@@ -207,23 +182,16 @@ def change_arduino(ard_nr):
     n_ards = len(arduinos);
     arduino = arduinos[int(ard_nr)];
     props = {'name': arduino.name, 'id': int(ard_nr), 'port': arduino.serial.port,
-            'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-            'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
+            'active': arduino.is_open()};
 
     uform = UpdateForm(id=ard_nr)
-
-    sform = UpdateSetpointForm(id=ard_nr)
-    gform = UpdateGainForm(id=ard_nr)
-    iform = UpdateIntegralForm(id=ard_nr)
-    diff_form = UpdateDifferentialForm(id=ard_nr)
 
     wform = SerialWaitForm(id=ard_nr)
     dform = DisconnectForm(id=ard_nr)
     cform = ReConnectForm(id=ard_nr)
 
     return render_template('change_arduino.html',
-        form=uform, dform = dform, cform = cform,  sform = sform,
-        gform = gform, iform = iform,diff_form = diff_form, wform = wform, props=props);
+        form=uform, dform = dform, cform = cform, wform = wform, props=props);
 
 @app.route('/update', methods=['POST'])
 def update():
@@ -270,216 +238,6 @@ def update():
         return render_template('change_arduino.html', form=uform, dform = dform,
             cform = cform,  sform = sform, gform = gform, iform = iform,
             diff_form = diff_form, wform = wform, props=props);
-
-@app.route('/setpoint', methods=['POST'])
-def arduino():
-    '''
-    Configure now settings for the arduino.
-    '''
-    global arduinos
-    if not arduinos:
-        flash('No arduino yet.', 'error')
-        return redirect(url_for('add_arduino'))
-
-    sform = UpdateSetpointForm();
-    uform = UpdateForm();
-    wform = SerialWaitForm()
-    dform = DisconnectForm()
-    cform = ReConnectForm()
-    gform = UpdateGainForm()
-    iform = UpdateIntegralForm()
-    diff_form = UpdateDifferentialForm()
-
-    id = int(sform.id.data);
-    arduino = arduinos[id];
-
-    if sform.validate_on_submit():
-        n_setpoint =  sform.setpoint.data;
-        if arduino.is_open():
-            o_str = 's{}'.format(n_setpoint)
-            b = o_str.encode()
-            arduino.serial.write(b)
-            arduino.setpoint = n_setpoint;
-            flash('We set the setpoint to {}'.format(n_setpoint))
-        else:
-            flash('Serial port not open.', 'error')
-        return redirect(url_for('change_arduino', ard_nr = id))
-    else:
-        props = {'name': arduino.name, 'id': int(ard_nr), 'port': arduino.serial.port,
-                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-                'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
-
-        return render_template('change_arduino.html', form=uform, dform = dform,
-            cform = cform,  sform = sform, gform = gform, iform = iform,
-            diff_form = diff_form, wform = wform, props=props);
-
-@app.route('/gain', methods=['POST'])
-def gain():
-    '''
-    Configure the new gain for the arduino.
-    '''
-    global arduinos
-    if not arduinos:
-        flash('No arduino yet.', 'error')
-        return redirect(url_for('add_arduino'))
-
-    sform = UpdateSetpointForm();
-    uform = UpdateForm();
-    wform = SerialWaitForm()
-    dform = DisconnectForm()
-    cform = ReConnectForm()
-    gform = UpdateGainForm()
-    iform = UpdateIntegralForm()
-    diff_form = UpdateDifferentialForm()
-
-    id = int(gform.id.data);
-    arduino = arduinos[id];
-
-    if gform.validate_on_submit():
-        n_gain =  gform.gain.data;
-        if arduino.is_open():
-            o_str = 'p{}'.format(n_gain)
-            b = o_str.encode()
-            arduino.serial.write(b)
-            arduino.gain =  n_gain;
-            flash('We set the gain to {}'.format(n_gain))
-        else:
-            flash('Serial port not open.', 'error')
-        return redirect(url_for('change_arduino', ard_nr = id))
-    else:
-        props = {'name': arduino.name, 'id': id, 'port': arduino.serial.port,
-                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-                'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
-        return render_template('change_arduino.html', form=uform, dform = dform,
-            cform = cform,  sform = sform, gform = gform, iform = iform,
-            diff_form = diff_form, wform = wform, props=props);
-
-@app.route('/integral', methods=['POST'])
-def integral():
-    '''
-    Configure the new gain for the arduino.
-    '''
-    global arduinos
-    if not arduinos:
-        flash('No arduino yet.', 'error')
-        return redirect(url_for('add_arduino'))
-
-    sform = UpdateSetpointForm();
-    uform = UpdateForm();
-    wform = SerialWaitForm()
-    dform = DisconnectForm()
-    cform = ReConnectForm()
-    gform = UpdateGainForm()
-    iform = UpdateIntegralForm()
-    diff_form = UpdateDifferentialForm()
-
-    id = int(iform.id.data);
-    arduino = arduinos[id];
-
-    if iform.validate_on_submit():
-        n_tau =  iform.tau.data;
-        if arduino.is_open():
-            o_str = 'i{}'.format(n_tau)
-            b = o_str.encode()
-            arduino.serial.write(b)
-            arduino.integral =  n_tau;
-            flash('We set the integration time  to {} seconds'.format(n_tau))
-        else:
-            flash('Serial port not open.', 'error')
-        return redirect(url_for('change_arduino', ard_nr = id))
-    else:
-        props = {'name': arduino.name, 'id': id, 'port': arduino.serial.port,
-                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-                'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
-
-        return render_template('change_arduino.html', form=uform, dform = dform,
-            cform = cform,  sform = sform, gform = gform, iform = iform,
-            diff_form = diff_form, wform = wform, props=props);
-
-@app.route('/diff', methods=['POST'])
-def diff():
-    '''
-    Configure the new gain for the arduino.
-    '''
-    global arduinos
-    if not arduinos:
-        flash('No arduino yet.', 'error')
-        return redirect(url_for('add_arduino'))
-
-    sform = UpdateSetpointForm();
-    uform = UpdateForm();
-    wform = SerialWaitForm()
-    dform = DisconnectForm()
-    cform = ReConnectForm()
-    gform = UpdateGainForm()
-    iform = UpdateIntegralForm()
-    diff_form = UpdateDifferentialForm()
-
-    id = int(diff_form.id.data);
-    arduino = arduinos[id];
-
-    if diff_form.validate_on_submit():
-        n_tau =  diff_form.tau.data;
-        if arduino.is_open():
-            o_str = 'd{}'.format(n_tau)
-            b = o_str.encode()
-            arduino.serial.write(b)
-            arduino.diff =  n_tau;
-            flash('We set the differentiation time  to {} seconds'.format(n_tau))
-        else:
-            flash('Serial port not open.', 'error')
-        return redirect(url_for('change_arduino', ard_nr = id))
-    else:
-        props = {'name': arduino.name, 'id': id, 'port': arduino.serial.port,
-                'active': arduino.is_open(), 'setpoint': arduino.setpoint,
-                'gain': arduino.gain, 'tauI': arduino.integral, 'tauD': arduino.diff};
-
-        return render_template('change_arduino.html', form=uform, dform = dform,
-            cform = cform,  sform = sform, gform = gform, iform = iform,
-            diff_form = diff_form, wform = wform, props=props);
-
-@app.route('/start', methods=['POST'])
-def start():
-
-    cform = ReConnectForm()
-
-    global arduinos;
-    if arduinos:
-        ssProto = arduinos[0];
-    else:
-        flash('No arduino connection existing yet', 'error')
-        return redirect(url_for('add_arduino'))
-
-    if cform.validate_on_submit():
-        try:
-            ssProto.open_serial(app.config['SERIAL_PORT'], 9600, timeout = 1)
-            ssProto.start()
-            flash('Started the connection')
-            return redirect(url_for('index'))
-        except Exception as e:
-            flash('{}'.format(e), 'error')
-            return redirect(url_for('config'))
-
-    return redirect(url_for('config'))
-
-@app.route('/stop', methods=['POST'])
-def stop():
-    dform = DisconnectForm()
-    global arduinos;
-    if arduinos:
-        ssProto = arduinos[0];
-    else:
-        flash('Nothing to disconnect from', 'error')
-
-    if dform.validate_on_submit():
-        #Disconnect the port.
-        ssProto.stop()
-        ssProto.serial.close()
-
-        flash('Closed the serial connection')
-        return redirect(url_for('config'))
-
-    return redirect(url_for('config'))
 
 @app.route('/file/<filestring>')
 def file(filestring):

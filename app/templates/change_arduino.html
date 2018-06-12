@@ -10,10 +10,6 @@
     <th scope="col">Name</th>
     <th scope="col">Port</th>
     <th scope="col">Status</th>
-    <th scope="col">Setpoint</th>
-    <th scope="col">Gain</th>
-    <th scope="col">tauI</th>
-    <th scope="col">tauD</th>
     <th scope="col">Other actions </th>
   </tr>
   </thead>
@@ -27,10 +23,6 @@
       {% else %}
       <td class="bg-warning">Closed</td>
       {% endif %}
-      <td scope="col">{{ props.setpoint }}</td>
-      <td scope="col">{{ props.gain }}</td>
-      <td scope="col">{{ props.tauI }}</td>
-      <td scope="col">{{ props.tauD }}</td>
       <td>
         <a class='btn btn-default' href="{{url_for('details', ard_nr = props.id)}}">Log</a><td>
         <!-- <a class='btn btn-default' href="{{url_for('index')}}"><span class ="glyphicon glyphicon-remove"></span></a><td> -->
@@ -43,20 +35,6 @@
   <div class="col"> {{ wtf.quick_form(form, action="/update") }}</div>
 </div>
 
-<h2>Update control parameters </h2>
-<div class="row">
-    <div class="col"> {{ wtf.quick_form(sform, action="/setpoint") }}</div>
-  </div>
-  <div class="row">
-      <div class="col"> {{ wtf.quick_form(gform, action="/gain") }}</div>
-  </div>
-  <div class="row">
-      <div class="col"> {{ wtf.quick_form(iform, action="/integral") }}</div>
-  </div>
-  <div class="row">
-      <div class="col"> {{ wtf.quick_form(diff_form, action="/diff") }}</div>
-  </div>
-</div>
 {% endblock %}
 
 
