@@ -25,6 +25,7 @@ class SerialSocketProtocol(object):
     '''
 
     serial = None
+    switch = False
     unit_of_work = 0
     name = '';
     id = 0;
@@ -64,6 +65,50 @@ class SerialSocketProtocol(object):
         open the serial port
         """
         self.serial = serial.Serial(port, baud_rate, timeout = 1)
+
+    def start(self):
+        """
+        start to listen to the serial port of the Arduino
+        """
+        if not self.switch:
+            if not self.is_open():
+                print('the serial port should be open right now')
+            else:
+                self.switch = True
+                thread = self.socketio.start_background_task(target=self.do_work)
+        else:
+            print('Already running')
+
+    def do_work(self):
+        """
+        do work and emit message
+        """
+        while self.switch:
+
+            # must call emit from the socketio
+            # must specify the namespace
+
+            if self.is_open():
+                if self.serial.in_waiting:
+                    self.unit_of_work += 1
+                    try:
+                        timestamp, ard_str = self.pull_data()
+                        vals = ard_str.split(',');
+                        self.socketio.emit('my_response',
+                            {'data': ard_str, 'count': self.unit_of_work})
+                    except Exception as e:
+                        print('{}'.format(e))
+                        self.socketio.emit('my_response',
+                            {'data': '{}'.format(e), 'count': self.unit_of_work})
+                        self.switch = False
+            else:
+                self.switch = False
+                # TODO: Make this a link
+                error_str = 'Port closed. please configure one properly under config.'
+                self.socketio.emit('log_response',
+                {'data': error_str, 'count': self.unit_of_work})
+
+            eventlet.sleep(0.1)
 
     def pull_data(self):
         '''
@@ -157,7 +202,8 @@ def add_arduino():
         ssProto = SerialSocketProtocol(socketio, name);
         ssProto.id = len(arduinos)
         try:
-            ssProto.open_serial(n_port, 115200, timeout = 1)
+            ssProto.open_serial(n_port, 115200, timeout = 1);
+            ssProto.start();
             if ssProto.is_open():
                 app.config['SERIAL_PORT'] = n_port;
                 arduinos.append(ssProto)
