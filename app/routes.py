@@ -360,26 +360,11 @@ def run_disconnect():
 def ping_pong():
     emit('my_pong')
 
-@socketio.on('read_mag')
-def read_mag():
-    global arduinos;
-    if arduinos:
-        arduino = arduinos[0];
-        timestamp, ard_str = arduino.pull_data();
-        print(ard_str)
-    else:
-        ard_str = 'Nothing to connect to';
-
-    session['receive_count'] = session.get('receive_count', 0) + 1;
-    emit('my_response',
-        {'data': ard_str, 'count': session['receive_count']})
-
 @socketio.on('trig_mag')
 def trig_mag():
     global arduinos;
     if arduinos:
         arduino = arduinos[0];
-        print(arduino)
         arduino.trig_measurement();
         ard_str = 'Triggered a measurement.';
     else:

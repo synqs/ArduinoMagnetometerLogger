@@ -8,8 +8,6 @@
     <th scope="col">Name</th>
     <th scope="col">Port</th>
     <th scope="col">Status</th>
-    <th scope="col">Setpoint</th>
-    <th scope="col">Current Value</th>
     <th scope="col">Other actions </th>
   </tr>
   </thead>
@@ -24,19 +22,16 @@
       {% else %}
       <td class="bg-warning">Closed</td>
       {% endif %}
-      <td>{{ ard.setpoint }}</td>
-      <td id ='{{ ard.label}}'>Not implemented.</td>
       <td>
         <a class='btn btn-default' href="{{url_for('change_arduino', ard_nr = ard.id)}}">Settings</a>
-        <a class='btn btn-default' href="{{url_for('details', ard_nr = ard.id)}}">Log</a><td>
-        <!-- <a class='btn btn-default' href="{{url_for('index')}}"><span class ="glyphicon glyphicon-remove"></span></a><td> -->
     </tr>
     {% endfor %}
  </tbody>
 </table>
+{% if not props %}
 <a class="btn btn-default" id="add_arduino" href="{{url_for('add_arduino')}}"> Add the Arduino.</a>
+{% endif %}
 <button class="btn btn-default" id="trig_button"> Trigger the measurement.</button>
-<button class="btn btn-default" id="read_button"> Read magnetic field value.</button>
 <h2>General stuff:</h2>
 <p>Average ping/pong latency: <b><span id="ping-pong"></span>ms</b></p>
 <div id="log"></div>
@@ -64,22 +59,9 @@ $(document).ready(function() {
     $('#log').prepend('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
   });
 
-  $("#read_button" ).click(function() {
-    socket.emit('read_mag');
-  });
-
   $("#trig_button" ).click(function() {
     socket.emit('trig_mag');
   });
-
-  socket.on('temp_value', function(msg) {
-    var temp = msg.data;
-    var id = msg.id;
-    var el_name = '#read' + msg.id;
-    console.log(el_name);
-    $(el_name).html(temp);
-  });
-
 
   // Interval function that tests message latency by sending a "ping"
   var ping_pong_times = [];
@@ -88,7 +70,6 @@ $(document).ready(function() {
     start_time = (new Date).getTime();
     socket.emit('my_ping');
   }, 1000);
-
 
   socket.on('my_pong', function() {
     var latency = (new Date).getTime() - start_time;
