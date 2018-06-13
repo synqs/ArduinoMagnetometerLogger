@@ -34,8 +34,8 @@
     {% endfor %}
  </tbody>
 </table>
-<a class="btn btn-default" id="add_arduino" href="{{url_for('add_arduino')}}"> Add another Arduino.</a>
-
+<a class="btn btn-default" id="add_arduino" href="{{url_for('add_arduino')}}"> Add the Arduino.</a>
+<button class="btn btn-default" id="trig_button"> Trigger the measurement.</button>
 <button class="btn btn-default" id="read_button"> Read magnetic field value.</button>
 <h2>General stuff:</h2>
 <p>Average ping/pong latency: <b><span id="ping-pong"></span>ms</b></p>
@@ -66,6 +66,10 @@ $(document).ready(function() {
 
   $("#read_button" ).click(function() {
     socket.emit('read_mag');
+  });
+
+  $("#trig_button" ).click(function() {
+    socket.emit('trig_mag');
   });
 
   socket.on('temp_value', function(msg) {

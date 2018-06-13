@@ -69,15 +69,20 @@ class SerialSocketProtocol(object):
         '''
         Pulling the actual data from the arduino.
         '''
-        ser = self.serial;
-        # only read out on ask
-        o_str = 'w'
-        b = o_str.encode()
-        ser.write(b);
-        stream = ser.read(ser.in_waiting);
+        stream = self.serial.read(self.serial.in_waiting);
         self.ard_str = stream.decode(encoding='windows-1252');
         timestamp = datetime.now().replace(microsecond=0).isoformat();
         return timestamp, self.ard_str
+
+    def trig_measurement(self):
+        '''
+        Triggering a measurement on the Arduino.
+        TODO: Would be good to get a confirmation that it is done.
+        '''
+        # only read out on ask
+        o_str = 'w'
+        b = o_str.encode()
+        self.serial.write(b);
 
 @app.context_processor
 def git_url():
@@ -316,6 +321,21 @@ def read_mag():
         arduino = arduinos[0];
         timestamp, ard_str = arduino.pull_data();
         print(ard_str)
+    else:
+        ard_str = 'Nothing to connect to';
+
+    session['receive_count'] = session.get('receive_count', 0) + 1;
+    emit('my_response',
+        {'data': ard_str, 'count': session['receive_count']})
+
+@socketio.on('trig_mag')
+def trig_mag():
+    global arduinos;
+    if arduinos:
+        arduino = arduinos[0];
+        print(arduino)
+        arduino.trig_measurement();
+        ard_str = 'Triggered a measurement.';
     else:
         ard_str = 'Nothing to connect to';
 
